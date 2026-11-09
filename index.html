@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salary sacrifice and childcare calculator</title>
+<style>
+  :root {
+    --text: #111;
+    --muted: #555;
+    --line: #8a8a8a;
+    --soft: #cfcfcf;
+    --panel: #f2f2f2;
+    --bg: #fff;
+    --ok: #1d5a2c;
+    --warn: #8a1c1c;
+    --link: #0b3d91;
+    --gap: 12px;
+    --pad: 16px;
+    --control: 38px;
+  }
+  * { box-sizing: border-box; border-radius: 0; }
+  body {
+    margin: 0;
+    padding: var(--pad);
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    font-weight: normal;
+  }
+  main { max-width: 800px; margin: 0 auto; }
+  h1, h2, h3, legend, th, strong, b, label, summary { font-weight: normal; }
+  h1 { font-size: 1.5rem; margin: 0 0 var(--gap); }
+  h2 { font-size: 1.1rem; margin: 0 0 var(--pad); padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  p { margin: 0 0 var(--gap); }
+  a { color: var(--link); }
+  .note { color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  section { border: 1px solid var(--line); padding: var(--pad); margin: 0 0 var(--pad); background: var(--bg); }
+  section > :last-child { margin-bottom: 0; }
+  fieldset.child { border: 1px solid var(--line); background: var(--panel); padding: var(--pad); margin: 0 0 var(--pad); min-width: 0; }
+  fieldset.child .grid + .grid, details.school .grid + .grid { margin-top: var(--gap); }
+  legend { padding: 0 6px; }
+
+  /* Form grids: inputs line up along the bottom even when a label wraps */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--gap) var(--pad); }
+  .field { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; min-width: 0; }
+  .field label { font-size: 0.9rem; color: var(--muted); line-height: 1.25; }
+  .field .note { margin: 2px 0 0; }
+  .field .check { min-height: 0; font-size: 1rem; color: var(--text); }
+  .grid.two { grid-template-columns: 1fr 1fr; }
+  .grid.cols3 { grid-template-columns: repeat(3, 1fr); }
+  .inline { display: flex; align-items: center; gap: 8px; min-height: var(--control); }
+  .inline input[type="number"] { width: 84px; }
+  .inline .check { min-height: 0; font-size: 1rem; color: var(--text); }
+  .inline .unit { color: var(--muted); white-space: nowrap; }
+
+  input[type="text"], input[type="number"], input[type="date"], input[type="month"], select {
+    font: inherit;
+    min-height: var(--control);
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--text);
+    width: 100%;
+  }
+  input:focus, select:focus, button:focus, summary:focus { outline: 2px solid var(--text); outline-offset: 1px; }
+
+  .check { display: flex; align-items: center; gap: 8px; min-height: var(--control); color: var(--text); font-size: 1rem; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  .checks label { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 1rem; }
+  input[type="checkbox"] { width: 18px; height: 18px; accent-color: #111; margin: 0; flex: none; }
+
+  button {
+    font: inherit;
+    min-height: var(--control);
+    padding: 6px 14px;
+    border: 1px solid var(--text);
+    background: #e6e6e6;
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover { background: #d8d8d8; }
+  button:disabled { color: #777; border-color: #aaa; background: #f2f2f2; cursor: default; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 var(--gap); }
+  .child-actions { margin-top: var(--pad); }
+
+  /* Choice sliders: label and value on top, slider and exact box on one line */
+  .slider-row {
+    display: grid;
+    grid-template-columns: 1fr 130px;
+    gap: 6px var(--gap);
+    align-items: center;
+    padding: var(--gap) 0;
+    border-top: 1px solid var(--soft);
+  }
+  .slider-row:first-of-type { border-top: 0; padding-top: 0; }
+  .slider-row .head { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: var(--gap); }
+  .slider-row .head label { color: var(--text); }
+  .slider-row output { white-space: nowrap; }
+  .slider-row .note, .slider-row .grid, .slider-row > .check { grid-column: 1 / -1; margin: 0; }
+  .slider-row > .check { min-height: 0; margin-top: 4px; }
+  .slider-row .grid { margin-top: 8px; }
+  .slider-row input[type="range"] { width: 100%; margin: 0; accent-color: #111; }
+  .slider-row.off { color: var(--muted); }
+  .exact input { text-align: right; }
+  .question { font-size: 1.1rem; line-height: 1.4; margin: var(--pad) 0 var(--gap); }
+  .scenario { border: 1px solid var(--soft); padding: var(--gap) var(--pad); margin: 0 0 var(--gap); }
+  .scenario:last-child { margin-bottom: 0; }
+  .scenario .q { font-size: 1.05rem; line-height: 1.4; margin: 0 0 6px; }
+  .scenario .ret { margin: 0 0 var(--gap); }
+  .scenario .ret span { color: var(--muted); }
+  .scenario .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px var(--gap); margin: 0 0 var(--gap); align-items: end; }
+  .scenario .fact { display: flex; flex-direction: column; justify-content: flex-end; }
+  .scenario .fact .label { color: var(--muted); font-size: 0.85rem; line-height: 1.25; }
+  .scenario .fact .val { font-size: 1rem; }
+  .scenario .actions { margin: 0; }
+  .scenario.weak { background: var(--panel); }
+  .scenario .warn { color: var(--warn); margin: 0 0 var(--gap); }
+  #values .slider-row { border-top: 0; padding-top: 0; }
+
+  .status { border: 1px solid var(--line); padding: 10px var(--gap); background: var(--panel); margin: 0 0 var(--gap); }
+  .status.ok { border-left: 6px solid var(--ok); }
+  .status.over { border-left: 6px solid var(--warn); }
+  .status p:last-child { margin-bottom: 0; }
+
+  /* School-age childcare: tucked away until needed */
+  details.school { margin-top: var(--pad); padding-top: var(--gap); border-top: 1px solid var(--line); }
+  details.school summary { cursor: pointer; }
+  details.school[open] summary { margin-bottom: var(--gap); }
+  .schoolSummary { color: var(--muted); }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; margin: 0 0 var(--gap); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: middle; }
+  th { background: var(--panel); }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  tr.total td { background: var(--panel); }
+  #resultTable td:first-child { width: 48%; }
+  #compareTable td:first-child { width: 26%; min-width: 180px; }
+  #yearTable th, #yearTable td { white-space: nowrap; padding: 6px 8px; }
+  textarea.scenarioName { display: block; width: 100%; min-width: 130px; font: inherit; font-size: 0.9rem; line-height: 1.3; padding: 4px 6px; border: 1px solid var(--line); background: #fff; color: var(--text); text-align: left; resize: none; }
+  th .removeScenario { margin-top: 6px; min-height: 28px; padding: 2px 8px; font-size: 0.85rem; }
+
+  ul { margin: 0; padding-left: 20px; }
+  li { margin: 0 0 6px; }
+  li:last-child { margin-bottom: 0; }
+
+  @media (max-width: 520px) {
+    body { padding: var(--gap); }
+    section, fieldset.child { padding: var(--gap); }
+    .slider-row { grid-template-columns: 1fr 110px; }
+    .grid.two, .grid.cols3 { grid-template-columns: 1fr; }
+    #compareTable td:first-child { min-width: 130px; }
+    #resultTable td:first-child { width: 45%; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Salary sacrifice and childcare calculator</h1>
+<p class="note">Shows what happens to your take-home pay and childcare costs if you bring adjusted net income down to £100,000 or less. Everything on this page recalculates as you change a value. England childcare rules. Income tax rates for England, Wales and Northern Ireland.</p>
+
+<div class="status over" id="errorBox" hidden><p id="errorText"></p></div>
+
+<section>
+  <h2>Example families</h2>
+  <div class="field">
+    <label for="preset">Load an example family to see how it behaves, then change anything you like</label>
+    <select id="preset"></select>
+  </div>
+  <p class="note" id="presetNote" style="margin: 8px 0 0"></p>
+</section>
+
+<section>
+  <h2>1. You</h2>
+  <div class="grid two">
+    <div class="field">
+      <label for="year">Tax year</label>
+      <select id="year">
+        <option value="2026-27">2026-27</option>
+        <option value="2027-28">2027-28 (estimate)</option>
+        <option value="2028-29">2028-29 (estimate)</option>
+        <option value="2029-30">2029-30 (estimate)</option>
+        <option value="2030-31">2030-31 (estimate)</option>
+        <option value="2031-32">2031-32 (estimate)</option>
+        <option value="2025-26">2025-26</option>
+        <option value="2024-25">2024-25</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="region">Where you live</label>
+      <select id="region">
+        <option>England</option>
+        <option>Wales</option>
+        <option>Northern Ireland</option>
+        <option disabled>Scotland (not supported yet)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="salary">Total taxable pay (a year)</label>
+      <input id="salary" type="number" min="0" step="500" value="110000">
+    </div>
+    <div class="field">
+      <label for="pensionable">Of that, pensionable salary (a year)</label>
+      <input id="pensionable" type="number" min="0" step="500" value="" placeholder="same as total taxable pay">
+    </div>
+    <div class="field" style="grid-column: 1 / -1">
+      <div class="inline">
+        <label class="check"><input type="checkbox" id="payRiseOn" checked> Assume a pay rise of</label>
+        <input id="payRise" type="number" min="0" max="20" step="0.5" value="3" aria-label="Pay rise each year, percent">
+        <span class="unit">% a year</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="hoursNow">Hours you work each week now</label>
+      <input id="hoursNow" type="number" min="1" max="60" step="0.5" value="37.5">
+    </div>
+    <div class="field">
+      <label for="hoursDay">Hours in your working day</label>
+      <input id="hoursDay" type="number" min="1" max="14" step="0.25" value="7.5">
+    </div>
+  </div>
+  <p class="note" style="margin: 8px 0 0">Total taxable pay is everything the £100,000 limit looks at: base salary, bonus, shares that vest and taxable benefits such as private medical insurance. Your employer's pension percentage usually applies to base salary only, so put that in as pensionable salary. Benefits such as private medical insurance count for income tax but not National Insurance, so including them slightly overstates your National Insurance and student loan.</p>
+  <div class="grid two" style="margin-top: var(--pad)">
+    <div class="field">
+      <label for="ugLoan">Undergraduate student loan</label>
+      <select id="ugLoan">
+        <option value="">None</option>
+        <option value="plan1">Plan 1</option>
+        <option value="plan2" selected>Plan 2</option>
+        <option value="plan4">Plan 4 (Scotland)</option>
+        <option value="plan5">Plan 5</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="check"><input type="checkbox" id="pgLoan"> Postgraduate loan as well</label>
+    </div>
+  </div>
+  <p class="note" style="margin: 8px 0 0">You can have both. A postgraduate loan is repaid on top of an undergraduate one, at 6% of income over £21,000. Undergraduate loans are 9% over their own threshold. Plan 5 repayments only exist from 2026-27.</p>
+</section>
+
+<section>
+  <h2>2. Children</h2>
+  <div id="children"></div>
+
+  <div class="grid two">
+    <div class="field">
+      <label for="funding">How your nursery applies funded hours</label>
+      <select id="funding">
+        <option value="stretched">Spread across 12 months</option>
+        <option value="term">Term time only</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="quarter">Month you opened your Tax-Free Childcare account</label>
+      <select id="quarter"></select>
+    </div>
+  </div>
+  <p class="note" style="margin: 8px 0 0">Your £500 Tax-Free Childcare top-up limit per child runs in 3-month blocks counted from the month you opened the account. Not sure, or no account yet? Leave it on April.</p>
+  <div class="actions" style="margin-top: var(--pad)"><button type="button" id="addChild">Add another child</button></div>
+</section>
+
+<section>
+  <h2>3. Pension</h2>
+  <div class="grid two">
+    <div class="field">
+      <label for="emp">Employer contribution (% of pensionable salary)</label>
+      <input id="emp" type="number" min="0" max="50" step="0.5" value="10">
+    </div>
+    <div class="field">
+      <label for="empbase">Employer percentage is worked out on</label>
+      <select id="empbase">
+        <option value="original">Salary before sacrifice</option>
+        <option value="sacrificed">Salary after sacrifice</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="existing">Pension you already pay in (£ a year)</label>
+      <input id="existing" type="number" min="0" step="100" value="0">
+    </div>
+    <div class="field">
+      <label for="carry">Unused allowance to carry forward (£)</label>
+      <input id="carry" type="number" min="0" step="1000" value="0">
+    </div>
+  </div>
+  <p class="note" style="margin: var(--pad) 0 8px">From April 2029, only the first £2,000 a year of pension salary sacrifice stays free of National Insurance. The rest pays National Insurance like other pension contributions. Income tax relief and your employer's contributions are not affected. Student loan repayments are assumed not to be affected.</p>
+</section>
+
+<section id="breakeven">
+  <h2>4. Your break-even point</h2>
+  <p id="beHeadline" class="question" style="margin-top: 0"></p>
+  <p class="note">Up to this salary, getting under £100,000 through your pension leaves you with more take-home pay now and a bigger pension. Above it, each extra pound you put in costs you take-home pay today. It depends on your children's ages, your childcare costs, your student loan and your pension, and it falls as your children grow up and there is less childcare help to lose.</p>
+  <div class="status" id="beWhere"></div>
+  <div class="table-wrap"><table id="beTable"></table></div>
+  <p class="note" id="beNote" style="margin: 0"></p>
+</section>
+
+<section id="values">
+  <h2>5. What is putting money into a pension worth to you?</h2>
+  <p>Money you pay into your pension through your employer comes off your pay before tax. If that brings your income down to £100,000, you also keep childcare help worth thousands of pounds a year.</p>
+  <p>So up to a point you end up with more take-home pay now and a bigger pension. That is the break-even point shown above. Past it, every extra pound you put in costs you some take-home pay today, in return for money you cannot touch until retirement. However, even past the break-even point, if you value a bigger pension more than the take-home pay you give up in return, it can still be worth it to you.</p>
+  <p>There is no right answer. It depends on how tight money is now and how much you want for later. Your answer below sets the line the rest of this page works to.</p>
+
+  <p class="question">Past the break-even point, how much less take-home pay a month would you accept to put money into your pension?</p>
+  <div class="actions">
+    <button type="button" class="tolPick" data-v="0">Nothing, only if I am better off</button>
+    <button type="button" class="tolPick" data-v="50">£50</button>
+    <button type="button" class="tolPick" data-v="100">£100</button>
+    <button type="button" class="tolPick" data-v="250">£250</button>
+    <button type="button" class="tolPick" data-v="500">£500</button>
+    <button type="button" class="tolPick" data-v="1000">£1,000</button>
+  </div>
+  <div class="slider-row">
+    <div class="head"><label for="tol">Take-home pay I would give up each month</label><output id="tolOut"></output></div>
+    <input id="tol" type="range" min="0" max="1500" step="25" value="0">
+    <div class="exact"><label class="sr-only" for="tolNum">Exact amount a month</label><input id="tolNum" type="number" min="0" step="1" value="0"></div>
+    <div class="note">£100 a month is £1,200 a year. This only matters once you are past the break-even point. Before it, putting money in leaves you better off anyway.</div>
+  </div>
+</section>
+
+<section id="scenarios">
+  <h2>6. What if...?</h2>
+  <p class="note">Common ways of getting under £100,000, worked out on the details above. Each shows what you give up, what you get in return, and what it does to your take-home pay. Press Use this to load one into your own choices below.</p>
+  <div id="scenarioList"></div>
+</section>
+
+<section>
+  <h2>7. Your own choices to bring income to £100,000 or less</h2>
+
+  <div class="slider-row">
+    <div class="head"><label for="sac">Pension salary sacrifice</label><output id="sacOut"></output></div>
+    <input id="sac" type="range" min="0" max="60000" step="50" value="0">
+    <div class="exact"><label class="sr-only" for="sacNum">Exact amount (£ a year)</label><input id="sacNum" type="number" min="0" step="1" value="0"></div>
+  </div>
+
+  <div class="slider-row">
+    <div class="head"><label for="gift">Gift Aid donations (amount you give)</label><output id="giftOut"></output></div>
+    <input id="gift" type="range" min="0" max="20000" step="100" value="0">
+    <div class="exact"><label class="sr-only" for="giftNum">Exact amount (£ a year)</label><input id="giftNum" type="number" min="0" step="1" value="0"></div>
+    <div class="note" id="giftNote"></div>
+  </div>
+
+  <div class="slider-row">
+    <div class="head"><label for="car">Electric car salary sacrifice (a month)</label><output id="carOut"></output></div>
+    <input id="car" type="range" min="0" max="1500" step="10" value="0">
+    <div class="exact"><label class="sr-only" for="carNum">Exact amount (£ a month)</label><input id="carNum" type="number" min="0" step="1" value="0"></div>
+    <div class="grid subgrid cols3">
+      <div class="field"><label for="carType">Car type</label><select id="carType"><option value="electric">Electric</option><option value="other">Other (petrol, diesel, hybrid)</option></select></div>
+      <div class="field"><label for="carBik">Taxable benefit rate (%)</label><input id="carBik" type="number" min="0" max="40" step="0.5" value="0"></div>
+      <div class="field"><label for="carList">Car list price (£)</label><input id="carList" type="number" min="0" step="500" value="0"></div>
+    </div>
+    <div class="grid subgrid cols3">
+      <div class="field"><label for="carStart">Lease starts</label><input id="carStart" type="month" value="2026-04"></div>
+      <div class="field"><label for="carEnd">Lease ends</label><input id="carEnd" type="month" value="2029-03"></div>
+      <div class="field"><label class="check" style="min-height: var(--control)"><input type="checkbox" id="carRenew"> Renew at the same price</label></div>
+    </div>
+    <div class="grid subgrid two">
+      <div class="field"><label for="carOther">What you would pay for a car otherwise (£ a month)</label><input id="carOther" type="number" min="0" step="10" value="0"></div>
+    </div>
+    <div class="note" id="carRateNote"></div>
+    <div class="note">The taxable benefit is list price times the rate. It counts towards adjusted net income and income tax. Electric cars have a low rate, which is why a car sacrifice can work. The lease also lowers the pay that National Insurance and student loan repayments are worked out on, and we assume the taxable benefit does not add to them, which helps most if you have a student loan.</div>
+  </div>
+
+  <div class="slider-row">
+    <div class="head"><label for="leave">Unpaid leave or bought holiday (weeks in the year)</label><output id="leaveOut"></output></div>
+    <input id="leave" type="range" min="0" max="12" step="1" value="0">
+    <div class="exact"><label class="sr-only" for="leaveNum">Exact weeks</label><input id="leaveNum" type="number" min="0" max="52" step="0.5" value="0"></div>
+    <div class="note">Both lower your pay in the same way as a salary sacrifice, so they lower adjusted net income. The pay is given up, not saved, and you get the time off.</div>
+  </div>
+
+  <div class="slider-row">
+    <div class="head"><label for="hours">Hours you would work each week</label><output id="hoursOut"></output></div>
+    <input id="hours" type="range" min="0" max="37.5" step="0.5" value="37.5">
+    <div class="exact"><label class="sr-only" for="hoursNum">Exact hours a week</label><input id="hoursNum" type="number" min="0" step="0.5" value="37.5"></div>
+    <div class="note">Pay is assumed to scale with hours, so 35 instead of 37.5 is about 6.7% less pay. Use the slider below if you would need less nursery as well.</div>
+  </div>
+
+  <div class="slider-row">
+    <div class="head"><label for="days">Nursery days you would drop each week</label><output id="daysOut"></output></div>
+    <input id="days" type="range" min="0" max="5" step="0.5" value="0">
+    <div class="exact"><label class="sr-only" for="daysNum">Exact days a week</label><input id="daysNum" type="number" min="0" max="5" step="0.5" value="0"></div>
+    <div class="note">Applies to each child at nursery. It lowers the nursery bill in your choices only, not in doing nothing, so you can see the saving from working fewer hours.</div>
+  </div>
+
+  <div class="status" id="aniBox"><p id="aniLine"></p></div>
+  <div class="status" id="allowanceBox"><p id="allowanceLine"></p></div>
+
+  <div class="actions"><button type="button" id="auto">Set pension sacrifice to get under £100,000</button></div>
+</section>
+
+<section>
+  <h2>8. Result</h2>
+  <div id="summary"></div>
+  <div class="table-wrap"><table id="resultTable"></table></div>
+  <div id="warnings"></div>
+</section>
+
+<section>
+  <h2>9. Compare options</h2>
+  <p class="note">Save different combinations of the choices in section 7 and compare them side by side. Each saved option is recalculated whenever you change your salary, children or pension, so the comparison stays up to date.</p>
+  <div class="actions">
+    <button type="button" id="addScenario">Add the current choices</button>
+    <button type="button" id="autoCompare">Compare ways to get under £100,000</button>
+    <button type="button" id="clearScenarios">Clear</button>
+  </div>
+  <div class="table-wrap"><table id="compareTable"></table></div>
+  <p class="note" id="compareNote"></p>
+</section>
+
+<section>
+  <h2>10. Year by year</h2>
+  <p class="note" id="yearNote"></p>
+  <div class="table-wrap"><table id="yearTable"></table></div>
+</section>
+
+<section>
+  <h2>Before you rely on this</h2>
+  <ul>
+    <li>Pension money is locked away until retirement. Count it only if you do not need the cash.</li>
+    <li>Funding and Tax-Free Childcare are checked against your expected income every 3 months, not once a year.</li>
+    <li>Both parents must be at or under £100,000 for the 30 hours and Tax-Free Childcare.</li>
+    <li>Tax-Free Childcare also needs each parent to expect to earn at least 16 hours a week at minimum wage, and you cannot get it while you receive Universal Credit (gov.uk). This calculator assumes both are fine.</li>
+    <li>Years after 2026-27 use 2026-27 tax figures and are estimates.</li>
+    <li>From April 2029, only the first £2,000 a year of pension salary sacrifice stays free of National Insurance (gov.uk). Student loan repayments are assumed not to be affected.</li>
+    <li>Unpaid leave and fewer hours also lower an employer pension that is a percentage of salary. Check how your scheme works.</li>
+    <li>Childcare is assumed to start at the age you enter for each child. Funded hours start in the term after 9 months.</li>
+    <li>This is general information, not financial advice.</li>
+  </ul>
+</section>
+
+</main>
+
+<script src="engine.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var num = function (id) { var v = Number($(id).value); return isFinite(v) ? v : 0; };
+
+  function money(n) {
+    var r = Math.round(Math.abs(n));
+    return (n < 0 && r !== 0 ? "-" : "") + "£" + r.toLocaleString("en-GB");
+  }
+  function signed(n) {
+    var r = Math.round(Math.abs(n));
+    if (r === 0) return "£0";
+    return (n < 0 ? "-" : "+") + "£" + r.toLocaleString("en-GB");
+  }
+
+  function fmtN(n) { return String(Math.round(n * 100) / 100); }
+
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  MONTHS.forEach(function (m, i) {
+    var o = document.createElement("option");
+    o.value = String(i + 1);
+    o.textContent = m;
+    if (i === 3) o.selected = true;
+    $("quarter").appendChild(o);
+  });
+
+  /* ---------- children ---------- */
+  var CHILD_FIELDS = {
+    birthDate: ["birthDate", "Date of birth", "date", ""],
+    startMonths: ["startMonths", "Starts nursery at age (months)", "number", 9, 'min="0" max="60"'],
+    days: ["days", "Nursery days a week", "number", 4, 'min="0" max="7"'],
+    hoursPerDay: ["hoursPerDay", "Hours in a nursery day", "number", 10, 'min="1" max="14" step="0.5"'],
+    dailyRate: ["dailyRate", "Price per day (£, before funding)", "number", 80, 'min="0" step="1"'],
+    extraMonthly: ["extraMonthly", "Meals and extras (£ a month)", "number", 0, 'min="0" step="5"']
+  };
+  var CHILD_ROWS = [
+    ["birthDate", "startMonths"],
+    ["days", "hoursPerDay", "dailyRate", "extraMonthly"]
+  ];
+  var SCHOOL_FIELDS = {
+    breakfastDays: ["breakfastDays", "Breakfast club days a week", "number", 0, 'min="0" max="5"'],
+    breakfastPrice: ["breakfastPrice", "Price per breakfast club session (£)", "number", "", 'min="0" step="0.5" placeholder="e.g. 6"'],
+    afterDays: ["afterDays", "After-school club days a week", "number", 0, 'min="0" max="5"'],
+    afterPrice: ["afterPrice", "Price per after-school session (£)", "number", "", 'min="0" step="0.5" placeholder="e.g. 11"'],
+    holidayWeeks: ["holidayWeeks", "Holiday club weeks a year", "number", 0, 'min="0" max="14"'],
+    holidayDays: ["holidayDays", "Holiday club days a week", "number", 0, 'min="0" max="5"'],
+    holidayPrice: ["holidayPrice", "Price per holiday club day (£)", "number", "", 'min="0" step="0.5" placeholder="e.g. 35"'],
+    termWeeks: ["termWeeks", "School term weeks a year", "number", 39, 'min="30" max="42"']
+  };
+  // One club per line: its days and its price together.
+  var SCHOOL_ROWS = [
+    ["breakfastDays", "breakfastPrice"],
+    ["afterDays", "afterPrice"],
+    ["holidayWeeks", "holidayDays", "holidayPrice"],
+    ["termWeeks"]
+  ];
+  var childCount = 0;
+  var MAX_CHILDREN = 6;
+
+  function fieldHtml(p, f, v) {
+    var value = v && v[f[0]] !== undefined ? v[f[0]] : f[3];
+    return '<div class="field"><label for="' + p + f[0] + '">' + f[1] + '</label>' +
+      '<input id="' + p + f[0] + '" data-f="' + f[0] + '" type="' + f[2] + '" ' + (f[4] || "") + ' value="' + value + '"></div>';
+  }
+
+  function rowsHtml(p, rows, defs, v) {
+    var html = "";
+    rows.forEach(function (row) {
+      html += '<div class="grid ' + (row.length === 3 ? "cols3" : "two") + '">';
+      row.forEach(function (key) { html += fieldHtml(p, defs[key], v); });
+      html += "</div>";
+    });
+    return html;
+  }
+
+  function childHtml(p, v) {
+    var html = '<legend>Child</legend>' + rowsHtml(p, CHILD_ROWS, CHILD_FIELDS, v);
+    var hasSchool = v && Engine.schoolAnnualSpend(v) > 0;
+    html += '<details class="school"' + (hasSchool ? ' open' : '') + '><summary>School-age childcare (from Reception): <span class="schoolSummary"></span></summary>' +
+      '<p class="note">Breakfast, after-school and holiday clubs. Tax-Free Childcare adds 20% of what you pay, up to £500 a quarter per child. Clubs usually cost far less than that limit, so the model uses what you actually spend.</p>' +
+      rowsHtml(p, SCHOOL_ROWS, SCHOOL_FIELDS, v) +
+      '<p class="note schoolSpend" style="margin: 8px 0 0"></p></details>';
+    html += '<div class="child-actions"><button type="button" class="remove">Remove this child</button></div>';
+    return html;
+  }
+
+  function renumberChildren() {
+    var items = document.querySelectorAll("#children fieldset.child");
+    items.forEach(function (f, i) {
+      f.querySelector("legend").textContent = "Child " + (i + 1);
+      f.querySelector(".remove").disabled = items.length === 1;
+    });
+    $("addChild").disabled = items.length >= MAX_CHILDREN;
+  }
+
+  function addChild(v) {
+    if (typeof v === "string") v = { birthDate: v };
+    childCount += 1;
+    var box = document.createElement("fieldset");
+    box.className = "child";
+    box.innerHTML = childHtml("c" + childCount, v || {});
+    $("children").appendChild(box);
+    box.querySelector(".remove").addEventListener("click", function () {
+      box.remove();
+      renumberChildren();
+      render();
+    });
+    renumberChildren();
+  }
+
+  /* ---------- read the form ---------- */
+  function readInputs() {
+    var loans = [];
+    if ($("ugLoan").value) loans.push($("ugLoan").value);
+    if ($("pgLoan").checked) loans.push("plan3"); // the postgraduate loan
+
+    var children = [];
+    document.querySelectorAll("#children fieldset.child").forEach(function (box) {
+      var c = {};
+      box.querySelectorAll("input[data-f]").forEach(function (inp) {
+        c[inp.getAttribute("data-f")] = inp.type === "date" ? inp.value : Number(inp.value);
+      });
+      children.push(c);
+    });
+
+    return {
+      year: $("year").value,
+      salary: num("salary"),
+      pensionableSalary: num("pensionable"),
+      payRisePct: $("payRiseOn").checked ? num("payRise") : 0,
+      loans: loans,
+      children: children,
+      fundingMode: $("funding").value,
+      quarterStartMonth: Number($("quarter").value),
+      pension: {
+        employerPct: num("emp") / 100,
+        employerBase: $("empbase").value,
+        existingEmployee: num("existing"),
+        carryForward: num("carry")
+      },
+      pensionSacrifice: num("sacNum"),
+      giftAidNet: num("giftNum"),
+      carMonthly: num("carNum"),
+      unpaidLeaveWeeks: num("leaveNum"),
+      hoursPerWeek: num("hoursNow") || prevHours,
+      hoursPerWorkDay: num("hoursDay"),
+      workedHoursPerWeek: num("hoursNum"),
+      nurseryDaysSaved: num("daysNum"),
+      tolerancePerMonth: num("tolNum"),
+      carListPrice: num("carList"),
+      carType: $("carType").value,
+      carStartMonth: $("carStart").value,
+      carEndMonth: $("carEnd").value,
+      carRenew: $("carRenew").checked,
+      carBikPct: num("carBik"),
+      carOtherwiseMonthly: num("carOther"),
+      yearsAhead: 8
+    };
+  }
+
+  /* ---------- render ---------- */
+  var last = null;
+  var scenarios = [];
+  var lastScenarios = [];
+
+  function el(tag, text, cls) {
+    var e = document.createElement(tag);
+    if (text != null) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  function row(label, a, b, cls) {
+    return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td><td class="num">' + a + '</td><td class="num">' + b + '</td></tr>';
+  }
+
+  function actionText(y) {
+    if (y.action === "none") return "Nothing needed";
+    if (y.action === "sacrifice") {
+      var parts = [];
+      if (y.payReduction > 0) parts.push("less pay " + money(y.payReduction));
+      if (y.carMonths > 0) parts.push("car for " + y.carMonths + " months");
+      if (!parts.length) return "Sacrifice " + money(y.pensionContribution);
+      if (y.pensionContribution > 0.5) parts.push("pension " + money(y.pensionContribution));
+      var text = parts.join(", ");
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+    if (y.action === "blocked") return "Over pension allowance";
+    return "Stay as you are";
+  }
+
+  function render() {
+    var r, inputs;
+    $("errorBox").hidden = true;
+    try {
+      inputs = readInputs();
+      r = Engine.computeAll(inputs);
+    } catch (e) {
+      $("errorText").textContent = "Cannot calculate: " + e.message;
+      $("errorBox").hidden = false;
+      return;
+    }
+    last = r;
+    document.querySelectorAll("#children fieldset.child").forEach(function (box, idx) {
+      var spend = Engine.schoolAnnualSpend(inputs.children[idx]);
+      box.querySelector(".schoolSummary").textContent = spend > 0 ? "about " + money(spend) + " a year" : "none entered";
+      box.querySelector(".schoolSpend").textContent = spend > 0
+        ? "School-age clubs cost about " + money(spend) + " a year. Tax-Free Childcare would add about " + money(spend * 0.2) + " of that."
+        : "No school-age clubs entered. Fill this in for the years after Reception, otherwise the model assumes no childcare costs once this child starts school.";
+    });
+    var a = r.doNothing, b = r.withChoices;
+
+    /* slider labels */
+    var sac = num("sacNum"), gift = num("giftNum"), car = num("carNum");
+    $("sacOut").textContent = money(sac) + " a year";
+    $("giftOut").textContent = money(gift) + " a year";
+    $("giftNote").textContent = "Charity receives " + money(gift * 1.25) + " once Gift Aid is added.";
+    var vals = r.values;
+    $("tolOut").textContent = money(vals.monthly) + " a month (" + money(vals.yearly) + " a year)";
+    $("carOut").textContent = money(car) + " a month, " + money(car * 12) + " a year";
+    $("leaveOut").textContent = num("leaveNum") + (num("leaveNum") === 1 ? " week" : " weeks");
+    var nowH = num("hoursNow") || prevHours;
+    $("hours").max = nowH;
+    $("hours").value = $("hoursNum").value; // the box is the real value; keep the slider in step
+    var workH = num("hoursNum");
+    $("hoursOut").textContent = workH + " hours a week" +
+      (workH < nowH ? " (down from " + nowH + ", pay down " + (Math.round((1 - workH / nowH) * 1000) / 10) + "%)" : "");
+    var dropped = num("daysNum");
+    $("daysOut").textContent = dropped === 0 ? "no change" : dropped + (dropped === 1 ? " day" : " days") + " fewer a week";
+    var electric = $("carType").value === "electric";
+    $("carBik").disabled = electric;
+    $("carRateNote").textContent = electric
+      ? "Rate used: " + r.carBikPctUsed + "% for " + r.year + ", from the published electric car rates (2% in 2024-25 rising to 9% in 2029-30). Check it against your employer's quote."
+      : "Enter the rate from your employer's quote. Petrol, diesel and hybrid rates depend on CO2 emissions and are much higher than electric.";
+    if (car > 0) {
+      $("carRateNote").textContent += " The lease is active for " + r.carMonths + " of 12 months in " + r.year + ".";
+    }
+    $("payRise").disabled = !$("payRiseOn").checked;
+    $("carEnd").disabled = $("carRenew").checked;
+
+    /* status boxes */
+    var ani = b.adjustedNetIncome;
+    var under = b.underLimit;
+    $("aniBox").className = "status " + (under ? "ok" : "over");
+    $("aniLine").textContent = "Adjusted net income with your choices: " + money(ani) + ". " +
+      (under ? "This is at or under £100,000." : "This is " + money(ani - 100000) + " over £100,000.");
+    var pc = b.pensionCheck;
+    $("allowanceBox").className = "status " + (pc.ok ? "ok" : "over");
+    $("allowanceLine").textContent = "Pension annual allowance used: " + money(pc.total) + " of " + money(pc.available) + ". " +
+      (pc.ok ? money(pc.headroom) + " left." : "Over by " + money(pc.excess) + ".");
+
+    /* summary */
+    var s = $("summary");
+    s.innerHTML = "";
+    if (r.salary <= 100000 && a.underLimit) {
+      s.appendChild(el("p", "Your income is already at or under £100,000, so the 30 hours and Tax-Free Childcare are not at risk. Salary sacrifice only changes how much you keep in cash against pension."));
+    } else {
+      s.appendChild(el("p", "Going over £100,000 costs you " + money(r.atStake) + " a year in lost funded hours and Tax-Free Childcare for the children entered."));
+      if (under) {
+        s.appendChild(el("p", "Your choices bring adjusted net income to " + money(ani) + ", so you keep that childcare help."));
+      }
+      if (!sac && !gift && !car && !(r.payGivenUp > 0)) {
+        s.appendChild(el("p", "No choices made yet. Move a slider in section 7, or press the button there to set the pension sacrifice that gets you under £100,000."));
+      } else {
+        if (r.payGivenUp > 0) {
+          s.appendChild(el("p", "Unpaid leave and fewer hours give up " + money(r.payGivenUp) + " of gross pay a year, in return for the time off."));
+        }
+        s.appendChild(el("p", "Take-home pay after childcare is " + money(Math.abs(r.cashDifference)) + " a year (" + money(Math.abs(r.cashDifference) / 12) + " a month) " + (r.cashDifference >= 0 ? "higher" : "lower") + " than doing nothing."));
+        if (b.pensionAdded > 0) {
+          var line = "You also put " + money(b.pensionAdded) + " into your pension this year.";
+          if (!gift && !car && !(r.payGivenUp > 0)) {
+            var lost = a.cashBeforeChildcare - b.cashBeforeChildcare;
+            line += " Before the childcare effect, that costs you " + money(lost) + " a year (" + money(lost / 12) + " a month) of take-home pay, or about " + Math.round((lost / b.pensionAdded) * 100) + "p for every £1 in the pension.";
+          }
+          s.appendChild(el("p", line));
+        }
+        if (r.carValue > 0) {
+          s.appendChild(el("p", "Counting the car you would otherwise pay for, you end up " + money(Math.abs(r.totalDifference)) + " a year (" + money(Math.abs(r.totalDifference) / 12) + " a month) " + (r.totalDifference >= 0 ? "better" : "worse") + " off."));
+        }
+      }
+      var route = r.values.route;
+      if (route && route.cashDifference < 0) {
+        s.appendChild(el("p", "Getting under £100,000 through your pension alone would cost you " + money(-route.cashDifference / 12) + " a month in take-home pay at this salary. " +
+          (route.withinLimit
+            ? "That is within the " + money(r.values.monthly) + " a month you said you would accept, so the suggestions include it."
+            : "That is more than the " + money(r.values.monthly) + " a month you said you would accept, so the suggestions do not include it.")));
+      }
+      if (r.breakEven.salary) {
+        var tail = r.values.monthly > 0 && r.values.limitSalary
+          ? " With the " + money(r.values.monthly) + " a month you said you would accept, it stays within your limit up to about " + money(r.values.limitSalary) + "."
+          : "";
+        s.appendChild(el("p", "Looking at take-home pay alone, sacrificing pension stops paying off at a salary of about " + money(r.breakEven.salary) + ". Above that you are choosing to save for retirement at the cost of cash today." + tail));
+      }
+      if (r.niCap.applies && r.niCap.excess > 0) {
+        s.appendChild(el("p", "From April 2029 only the first " + money(r.niCap.amount) + " a year of pension salary sacrifice is free of National Insurance. This year " + money(r.niCap.excess) + " of your sacrifice is over that, so it pays National Insurance. Income tax relief is unchanged, and student loan repayments are assumed to be."));
+      }
+      if (r.maxSalaryWithinAllowance < 400000) {
+        var pen = inputs.pension;
+        var empPct = Math.round(pen.employerPct * 1000) / 10;
+        var lead = empPct > 0
+          ? "With your employer paying " + fmtN(empPct) + "% of your salary into your pension"
+          : "With no pension contribution from your employer";
+        if (pen.existingEmployee > 0) lead += " and you already paying in " + money(pen.existingEmployee) + " a year";
+        var allowanceText = pen.carryForward > 0
+          ? "the £60,000 annual allowance plus " + money(pen.carryForward) + " carried forward"
+          : "the £60,000 annual allowance";
+        s.appendChild(el("p", lead + ", " + allowanceText + " means you can sacrifice down to £99,999 only at salaries up to about " + money(r.maxSalaryWithinAllowance) + "."));
+      }
+    }
+
+    /* result table: yearly figures; take-home pay also shown per month */
+    var t = '<tr><th></th><th class="num">Do nothing</th><th class="num">With your choices</th></tr>';
+    t += row("Adjusted net income", money(a.adjustedNetIncome), money(b.adjustedNetIncome));
+    var wk = r.work;
+    t += row("Hours worked a week", fmtN(wk.hoursBefore), fmtN(wk.hoursAfter));
+    t += row("Days worked a week (at " + fmtN(wk.hoursPerWorkDay) + " hours a day)", fmtN(wk.daysBefore), fmtN(wk.daysAfter));
+    if (wk.unpaidLeaveDaysAfter > 0) {
+      t += row("Unpaid leave in the year, in days", "0", fmtN(wk.unpaidLeaveDaysAfter));
+    }
+    t += row("Working days paid in the year, including paid holiday", fmtN(wk.paidDaysBefore), fmtN(wk.paidDaysAfter));
+    wk.nursery.forEach(function (n) {
+      if (n.before > 0) t += row(n.name + " nursery days a week", fmtN(n.before), fmtN(n.after));
+    });
+    if (r.payGivenUp > 0) {
+      t += row("Pay after unpaid leave and reduced hours", money(r.salary), money(r.reducedSalary));
+    }
+    t += row("Income tax", money(a.tax), money(b.tax));
+    t += row("National Insurance", money(a.ni), money(b.ni));
+    t += row("Student loan repayments", money(a.studentLoanTotal), money(b.studentLoanTotal));
+    t += row("Added to pension by you", money(a.pensionAdded), money(b.pensionAdded));
+    t += row("Employer pension contribution", money(a.pensionCheck.employerContribution), money(b.pensionCheck.employerContribution));
+    t += row("Annual allowance used", money(a.pensionCheck.total) + " of " + money(a.pensionCheck.available), money(b.pensionCheck.total) + " of " + money(b.pensionCheck.available));
+    function rowNZ(label, x, y) { return x || y ? row(label, money(x), money(y)) : ""; }
+    t += rowNZ("Gift Aid you give", a.giftAidGross / 1.25, b.giftAidGross / 1.25);
+    t += rowNZ("Gift Aid the charity receives", a.giftAidGross, b.giftAidGross);
+    t += rowNZ("Car lease taken from pay", a.carSacrifice, b.carSacrifice);
+    t += rowNZ("Car taxable benefit", a.carBenefitTaxable, b.carBenefitTaxable);
+    t += row("Childcare paid after funding and Tax-Free Childcare", money(a.childcareCost), money(b.childcareCost));
+    t += row("Take-home pay after childcare, a year", money(a.cash), money(b.cash), "total");
+    t += row("Take-home pay after childcare, a month", money(a.cash / 12), money(b.cash / 12), "total");
+    if (r.carValue > 0) {
+      t += row("Plus the car you would otherwise pay for, a year", money(r.doNothingTotal), money(r.withChoicesTotal), "total");
+      t += row("Plus the car you would otherwise pay for, a month", money(r.doNothingTotal / 12), money(r.withChoicesTotal / 12), "total");
+    }
+    $("resultTable").innerHTML = t;
+
+    /* warnings */
+    var w = $("warnings");
+    w.innerHTML = "";
+    r.warnings.forEach(function (msg) {
+      var d = el("div", null, "status over");
+      d.appendChild(el("p", msg));
+      w.appendChild(d);
+    });
+
+    /* year table: yearly figures; take-home difference also per month */
+    var y = '<tr><th rowspan="2">Tax year</th><th class="num" rowspan="2">Salary</th>' +
+      '<th class="num" rowspan="2">Childcare at stake</th><th rowspan="2">Suggestion</th>' +
+      '<th class="num" colspan="2">Take-home difference</th><th class="num" rowspan="2">Into pension</th></tr>' +
+      '<tr><th class="num">a year</th><th class="num">a month</th></tr>';
+    r.years.forEach(function (yr) {
+      var none = yr.action === "none";
+      var noPension = none || yr.action === "stay";
+      y += '<tr><td>' + yr.taxYear + (yr.projected ? "*" : "") + '</td>' +
+        '<td class="num">' + money(yr.salary) + '</td>' +
+        '<td class="num">' + money(yr.childcareAtStake) + '</td>' +
+        '<td>' + actionText(yr) + '</td>' +
+        '<td class="num">' + (none ? "-" : signed(yr.totalAdvantageOfSacrificing)) + '</td>' +
+        '<td class="num">' + (none ? "-" : signed(yr.totalAdvantageOfSacrificing / 12)) + '</td>' +
+        '<td class="num">' + (noPension ? "-" : money(yr.pensionContribution)) + '</td></tr>';
+    });
+    $("yearTable").innerHTML = y;
+    renderCompare(inputs, r);
+    renderScenarios(inputs);
+    renderBreakEven(r);
+    $("yearNote").textContent = "Each row compares doing nothing with sacrificing pension down to £99,999 in that year, using your employer's pension contribution and the other pension details above. The employer's contribution stays the same percentage of salary. Contributions you already make stay flat. The monthly take-home figure is the yearly figure divided by 12. In years with a car lease, the take-home difference counts the car you would otherwise pay for. * Estimate: years after 2026-27 use the 2026-27 tax figures. From 2029-30, pension sacrifice over £2,000 a year also pays National Insurance.";
+    $("yearNote").textContent += " Suggestions follow the line you set at the top: " +
+      (r.values.monthly > 0 ? "up to " + money(r.values.monthly) + " a month less take-home pay for pension." : "only where you are better off in take-home pay.");
+  }
+
+  /* ---------- compare options ---------- */
+  var LEVER_KEYS = ["pensionSacrifice", "giftAidNet", "carMonthly", "carType", "carListPrice", "carBikPct",
+    "carOtherwiseMonthly", "carStartMonth", "carEndMonth", "carRenew", "unpaidLeaveWeeks",
+    "workedHoursPerWeek", "nurseryDaysSaved"];
+
+  function esc(t) {
+    return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function pickLevers(inputs) {
+    var o = {};
+    LEVER_KEYS.forEach(function (k) { o[k] = inputs[k]; });
+    return o;
+  }
+
+  function describeLevers(l, inputs) {
+    var parts = [];
+    if (l.pensionSacrifice > 0) parts.push("Pension " + money(l.pensionSacrifice));
+    if (l.giftAidNet > 0) parts.push("Gift Aid " + money(l.giftAidNet));
+    if (l.carMonthly > 0) parts.push("Car " + money(l.carMonthly) + " a month");
+    if (l.unpaidLeaveWeeks > 0) parts.push(l.unpaidLeaveWeeks + (l.unpaidLeaveWeeks === 1 ? " week" : " weeks") + " unpaid");
+    if (l.workedHoursPerWeek < inputs.hoursPerWeek) parts.push(l.workedHoursPerWeek + " hours");
+    if (l.nurseryDaysSaved > 0) parts.push(l.nurseryDaysSaved + " fewer nursery days");
+    return parts.length ? parts.join(", ") : "No changes";
+  }
+
+  function workSummary(work, which) {
+    var key = which === "before" ? "Before" : "After";
+    var nursery = work.nursery.reduce(function (sum, n) { return sum + (which === "before" ? n.before : n.after); }, 0);
+    return { hours: work["hours" + key], days: work["days" + key], leave: work["unpaidLeaveDays" + key], nursery: nursery };
+  }
+
+  function addScenario(levers, name) {
+    scenarios.push({ name: name || describeLevers(levers, readInputs()), levers: levers });
+  }
+
+  function renderCompare(inputs, r) {
+    if (scenarios.length === 0) {
+      $("compareTable").innerHTML = "";
+      $("compareNote").textContent = "Nothing saved yet. Set the choices in section 7 and press Add the current choices, or press Compare ways to get under £100,000.";
+      return;
+    }
+    var cols = [{ name: "Do nothing", o: r.doNothing, pay: r.salary, fixed: true, work: workSummary(r.work, "before") }];
+    scenarios.forEach(function (sc, i) {
+      try {
+        var c = Engine.computeAll(Object.assign({}, inputs, sc.levers));
+        cols.push({ name: sc.name, o: c.withChoices, pay: c.reducedSalary, idx: i, work: workSummary(c.work, "after") });
+      } catch (e) {
+        cols.push({ name: sc.name, o: null, pay: 0, idx: i, error: e.message });
+      }
+    });
+    var base = r.doNothing.cash;
+    var rows = [
+      { label: "Hours worked a week", get: function (c) { return c.work.hours; }, fmt: fmtN },
+      { label: "Days worked a week", get: function (c) { return c.work.days; }, fmt: fmtN },
+      { label: "Unpaid leave in the year, in days", get: function (c) { return c.work.leave; }, fmt: fmtN, hide0: true },
+      { label: "Nursery days a week, all children", get: function (c) { return c.work.nursery; }, fmt: fmtN, hide0: true },
+      { label: "Keeps the childcare help", get: function (c) { return c.o.underLimit ? "Yes" : "No"; }, text: true },
+      { label: "Adjusted net income", get: function (c) { return c.o.adjustedNetIncome; } },
+      { label: "Pay after unpaid leave and fewer hours", get: function (c) { return c.pay; }, hideIfSame: true },
+      { label: "Income tax", get: function (c) { return c.o.tax; } },
+      { label: "National Insurance", get: function (c) { return c.o.ni; } },
+      { label: "Student loan repayments", get: function (c) { return c.o.studentLoanTotal; } },
+      { label: "Added to pension by you", get: function (c) { return c.o.pensionAdded; }, hide0: true },
+      { label: "Gift Aid you give", get: function (c) { return c.o.giftAidGross / 1.25; }, hide0: true },
+      { label: "Car lease taken from pay", get: function (c) { return c.o.carSacrifice; }, hide0: true },
+      { label: "Childcare paid after funding and Tax-Free Childcare", get: function (c) { return c.o.childcareCost; } },
+      { label: "Take-home pay after childcare, a year", get: function (c) { return c.o.cash; }, cls: "total" },
+      { label: "Take-home pay after childcare, a month", get: function (c) { return c.o.cash / 12; }, cls: "total" },
+      { label: "Compared with doing nothing, a year", get: function (c) { return c.o.cash - base; }, signed: true, cls: "total" },
+      { label: "Compared with doing nothing, a month", get: function (c) { return (c.o.cash - base) / 12; }, signed: true, cls: "total" }
+    ];
+
+    var head = "<tr><th></th>";
+    cols.forEach(function (c) {
+      if (c.fixed) { head += '<th class="num">Do nothing</th>'; return; }
+      head += '<th class="num"><textarea class="scenarioName" data-i="' + c.idx + '" rows="2" aria-label="Option name">' + esc(c.name) + '</textarea>' +
+        '<br><button type="button" class="removeScenario" data-i="' + c.idx + '">Remove</button></th>';
+    });
+    head += "</tr>";
+
+    var body = "";
+    rows.forEach(function (row) {
+      var values = cols.map(function (c) { return c.o ? row.get(c) : null; });
+      if (row.hide0 && values.every(function (v) { return !v; })) return;
+      if (row.hideIfSame && values.every(function (v) { return v === values[0]; })) return;
+      body += "<tr" + (row.cls ? ' class="' + row.cls + '"' : "") + "><td>" + row.label + "</td>";
+      values.forEach(function (v) {
+        var shown = v === null ? "-" : row.fmt ? row.fmt(v) : row.text ? v : row.signed ? signed(v) : money(v);
+        body += '<td class="num">' + shown + "</td>";
+      });
+      body += "</tr>";
+    });
+    $("compareTable").innerHTML = head + body;
+
+    var notes = cols.filter(function (c) { return c.error; }).map(function (c) { return c.name + ": " + c.error; });
+    $("compareNote").textContent = notes.length
+      ? "Could not calculate: " + notes.join("; ")
+      : "Each option changes only the choices in section 7. Everything else comes from the rest of the form.";
+  }
+
+  $("addScenario").addEventListener("click", function () {
+    addScenario(pickLevers(readInputs()));
+    render();
+  });
+  $("clearScenarios").addEventListener("click", function () {
+    scenarios = [];
+    render();
+  });
+  $("compareTable").addEventListener("click", function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains("removeScenario")) {
+      scenarios.splice(Number(t.getAttribute("data-i")), 1);
+      render();
+    }
+  });
+  // One option per way of getting under the limit, each used on its own.
+  $("autoCompare").addEventListener("click", function () {
+    var inputs = readInputs();
+    var salary = inputs.salary;
+    var contracted = inputs.hoursPerWeek || 37.5;
+    var zero = pickLevers(Object.assign({}, inputs, {
+      pensionSacrifice: 0, giftAidNet: 0, carMonthly: 0, unpaidLeaveWeeks: 0,
+      workedHoursPerWeek: contracted, nurseryDaysSaved: 0
+    }));
+    scenarios = [];
+    if (salary > 99999) {
+      addScenario(Object.assign({}, zero, { pensionSacrifice: Math.ceil(salary - 99999) }));
+      addScenario(Object.assign({}, zero, { unpaidLeaveWeeks: Math.ceil((1 - 99999 / salary) * 52 * 2) / 2 }));
+      addScenario(Object.assign({}, zero, { workedHoursPerWeek: Math.floor(contracted * (99999 / salary) * 2) / 2 }));
+    }
+    render();
+  });
+
+  /* ---------- your break-even point ---------- */
+  function renderBreakEven(r) {
+    var v = r.values, head = $("beHeadline"), where = $("beWhere");
+    if (v.pointFree) {
+      head.textContent = "Your break-even point is a salary of about " + money(v.pointFree) + ".";
+    } else if (v.pointFreeReason && /does not win/.test(v.pointFreeReason)) {
+      head.textContent = "You have no break-even point above £100,000: getting under it through your pension already costs you take-home pay.";
+    } else {
+      head.textContent = "Getting under £100,000 through your pension leaves you better off in take-home pay at every salary we tested, so there is no break-even point.";
+    }
+
+    where.innerHTML = "";
+    function add(t) { where.appendChild(el("p", t)); }
+    var route = v.route;
+    if (r.salary > 100000 && route && !route.feasible) {
+      // The pension allowance, not the break-even point, is the limit here.
+      where.className = "status over";
+      var rel = v.pointFree
+        ? (r.salary <= v.pointFree ? money(v.pointFree - r.salary) + " below your break-even point, but" : money(r.salary - v.pointFree) + " above your break-even point, and")
+        : "";
+      add("Your salary of " + money(r.salary) + " is " + rel + (rel ? " " : "") + "putting that much into your pension takes you over your annual allowance, so the pension alone cannot get you under £100,000. Time off or Gift Aid could cover the rest.");
+    } else if (r.salary <= 100000) {
+      where.className = "status";
+      add("Your salary of " + money(r.salary) + " is already at or under £100,000, so you do not need to put money in to keep the childcare help. The break-even point shows where your pay would start to matter.");
+    } else if (v.pointFree && r.salary <= v.pointFree) {
+      where.className = "status ok";
+      add("Your salary of " + money(r.salary) + " is " + money(v.pointFree - r.salary) + " below it, so getting under £100,000 through your pension is free. It leaves you better off in take-home pay as well as adding to your pension.");
+    } else if (v.pointFree) {
+      where.className = "status " + (route && route.withinLimit ? "ok" : "over");
+      add("Your salary of " + money(r.salary) + " is " + money(r.salary - v.pointFree) + " above it. Getting under £100,000 through your pension costs you " + money(Math.abs(route.cashDifference) / 12) + " a month in take-home pay.");
+      if (v.monthly > 0 || route.withinLimit) {
+        add(route.withinLimit
+          ? "That is within the " + money(v.monthly) + " a month you said you would accept."
+          : "That is more than the " + money(v.monthly) + " a month you said you would accept.");
+      }
+    } else {
+      where.className = "status";
+      add("Your salary is " + money(r.salary) + ".");
+    }
+    if (v.monthly > 0 && v.pointLimit) {
+      add("With the " + money(v.monthly) + " a month you said you would accept, the line moves up to about " + money(v.pointLimit) + ".");
+    }
+    if (v.ceiling < 400000 && !(r.salary > 100000 && route && !route.feasible)) {
+      add("Your pension annual allowance, including your employer's contribution, means the pension alone can get you under £100,000 only up to a salary of about " + money(v.ceiling) + ". Above that you would need time off or Gift Aid as well.");
+    }
+
+    var rows = r.breakEvenByYear || [];
+    var t = '<tr><th>Tax year</th><th class="num">Your pay</th><th class="num">Break-even point</th><th>Your pay against it</th></tr>';
+    var anyEstimate = false;
+    rows.forEach(function (row) {
+      if (row.projected) anyEstimate = true;
+      var point = row.free ? money(row.free)
+        : /does not win/.test(row.freeReason || "") ? "none above £100,000" : "any salary";
+      var against = row.free
+        ? (row.pay <= row.free ? money(row.free - row.pay) + " below" : money(row.pay - row.free) + " above")
+        : "-";
+      t += "<tr><td>" + row.taxYear + (row.projected ? "*" : "") + '</td><td class="num">' + money(row.pay) +
+        '</td><td class="num">' + point + "</td><td>" + against + "</td></tr>";
+    });
+    $("beTable").innerHTML = t;
+    $("beNote").textContent = (rows.length ? "Your pay each year includes any pay rise you entered. " : "") +
+      (anyEstimate ? "* Estimate: years after 2026-27 use the 2026-27 tax figures." : "");
+  }
+
+  /* ---------- what if scenarios ---------- */
+  function lowerFirst(t) { return t.charAt(0).toLowerCase() + t.slice(1); }
+
+  function renderScenarios(inputs) {
+    var list = $("scenarioList");
+    list.innerHTML = "";
+    lastScenarios = Engine.scenarioResults(inputs);
+    if (!lastScenarios.length) {
+      list.appendChild(el("p", "Your salary is already at or under £100,000, so there is nothing to get under. These what-ifs will appear if your pay goes over it.", "note"));
+      return;
+    }
+    lastScenarios.forEach(function (it, i) {
+      var card = document.createElement("div");
+      card.className = "scenario" + (it.possible ? "" : " weak");
+      card.appendChild(el("p", "What if I " + lowerFirst(it.question) + "?", "q"));
+
+      var ret = el("p", null, "ret");
+      var lead = document.createElement("span");
+      lead.textContent = "What you get in return: ";
+      ret.appendChild(lead);
+      ret.appendChild(document.createTextNode(it.inReturn));
+      card.appendChild(ret);
+
+      if (!it.enough) {
+        card.appendChild(el("p", "Not enough on its own: income stays over £100,000, so the childcare help is still lost.", "warn"));
+      } else if (!it.feasible) {
+        card.appendChild(el("p", "Not possible as it stands: it takes your pension input to " + money(it.pensionTotal) + ", over your " + money(it.pensionAvailable) + " annual allowance.", "warn"));
+      }
+
+      var facts = el("div", null, "facts");
+      function fact(label, value) {
+        var f = el("div", null, "fact");
+        f.appendChild(el("div", label, "label"));
+        f.appendChild(el("div", value, "val"));
+        facts.appendChild(f);
+      }
+      if (it.possible) fact("Take-home a month", signed(it.takeHomeMonthly));
+      fact("Pay given up a year", money(it.payGivenUp));
+      fact("Childcare bill a year", it.childcareSaved > 0.5 ? money(it.childcareSaved) + " lower" : "no change");
+      fact("Keeps childcare help", it.enough ? "Yes" : "No");
+      if (it.possible) fact("Against your limit", it.takeHomeMonthly >= 0 ? "No cost" : it.withinLimit ? "Costs, within it" : "Costs, over it");
+      card.appendChild(facts);
+
+      card.appendChild(el("p", it.text, null));
+      if (it.vsPension) card.appendChild(el("p", it.vsPension, "note"));
+      if (it.assumption) card.appendChild(el("p", it.assumption, "note"));
+
+      var actions = el("div", null, "actions");
+      var use = el("button", "Use this", "useScenario");
+      use.type = "button";
+      use.setAttribute("data-i", String(i));
+      var add = el("button", "Add to comparison", "addScenarioCard");
+      add.type = "button";
+      add.setAttribute("data-i", String(i));
+      actions.appendChild(use);
+      actions.appendChild(add);
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+  }
+
+  function applyLevers(l) {
+    setPair("sac", l.pensionSacrifice);
+    setPair("gift", l.giftAidNet);
+    setPair("car", l.carMonthly);
+    setPair("leave", l.unpaidLeaveWeeks);
+    $("hours").max = num("hoursNow") || prevHours;
+    setPair("hours", l.workedHoursPerWeek);
+    setPair("days", l.nurseryDaysSaved);
+    // Car details only come with the car scenario; other scenarios leave them alone.
+    if (l.carListPrice !== undefined) setVal("carList", l.carListPrice);
+    if (l.carType) setVal("carType", l.carType);
+    if (l.carStartMonth) setVal("carStart", l.carStartMonth);
+    if (l.carEndMonth) setVal("carEnd", l.carEndMonth);
+    if (l.carRenew !== undefined) $("carRenew").checked = !!l.carRenew;
+    if (l.carOtherwiseMonthly !== undefined) setVal("carOther", l.carOtherwiseMonthly);
+    render();
+  }
+
+  $("scenarioList").addEventListener("click", function (e) {
+    var t = e.target;
+    if (!t || !t.classList) return;
+    var it = lastScenarios[Number(t.getAttribute("data-i"))];
+    if (!it) return;
+    if (t.classList.contains("useScenario")) applyLevers(it.levers);
+    if (t.classList.contains("addScenarioCard")) {
+      addScenario(Object.assign({}, it.levers), it.short);
+      render();
+    }
+  });
+
+  /* ---------- wiring ---------- */
+  function onAnyInput(e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains("scenarioName")) {
+      scenarios[Number(t.getAttribute("data-i"))].name = t.value;
+      return;
+    }
+    render();
+  }
+  document.addEventListener("input", onAnyInput);
+  document.addEventListener("change", onAnyInput);
+
+  document.querySelectorAll(".tolPick").forEach(function (b) {
+    b.addEventListener("click", function () {
+      setPair("tol", b.getAttribute("data-v"));
+      render();
+    });
+  });
+
+  $("addChild").addEventListener("click", function () {
+    addChild("");
+    render();
+  });
+
+  $("auto").addEventListener("click", function () {
+    if (!last) return;
+    var withoutPension = last.withChoices.adjustedNetIncome + num("sacNum");
+    var need = Math.max(0, withoutPension - 99999);
+    setPair("sac", Math.ceil(need));
+    render();
+  });
+
+  /* ---------- examples ---------- */
+  function setVal(id, v) { $(id).value = v; }
+
+  /* Each slider has an exact text box. The text box is the real value; the
+     slider is a coarse way to set it, and follows the text box. */
+  function setPair(id, v) { $(id).value = v; $(id + "Num").value = v; }
+  var prevHours = 37.5;
+  $("hoursNow").addEventListener("input", function () {
+    var now = Number($("hoursNow").value);
+    // Ignore empty or half-typed values, otherwise hours worked would drop to zero while typing.
+    if (!(now > 0)) return;
+    // Raise or lower the slider's maximum first, or the slider clamps the new value.
+    $("hours").max = now;
+    var worked = Number($("hoursNum").value);
+    if (worked === prevHours || worked > now) setPair("hours", now);
+    prevHours = now;
+  });
+  ["sac", "gift", "car", "leave", "hours", "days", "tol"].forEach(function (id) {
+    $(id).addEventListener("input", function () { $(id + "Num").value = $(id).value; });
+    $(id + "Num").addEventListener("input", function () { $(id).value = $(id + "Num").value; });
+  });
+
+  function applyInputs(i) {
+    setVal("year", i.year);
+    setVal("salary", i.salary);
+    setVal("pensionable", i.pensionableSalary || "");
+    $("payRiseOn").checked = i.payRisePct > 0;
+    setVal("payRise", i.payRisePct > 0 ? i.payRisePct : 3);
+    var undergrad = i.loans.filter(function (l) { return l !== "plan3"; })[0];
+    $("ugLoan").value = undergrad || "";
+    $("pgLoan").checked = i.loans.indexOf("plan3") >= 0;
+
+    $("children").innerHTML = "";
+    i.children.forEach(function (c) { addChild(c); });
+    renumberChildren();
+    setVal("funding", i.fundingMode);
+    setVal("quarter", i.quarterStartMonth);
+
+    setVal("emp", Math.round(i.pension.employerPct * 1000) / 10);
+    setVal("empbase", i.pension.employerBase);
+    setVal("existing", i.pension.existingEmployee);
+    setVal("carry", i.pension.carryForward);
+
+    setPair("sac", i.pensionSacrifice);
+    setPair("gift", i.giftAidNet);
+    setPair("car", i.carMonthly);
+    setVal("hoursNow", i.hoursPerWeek);
+    setVal("hoursDay", i.hoursPerWorkDay || 7.5);
+    prevHours = i.hoursPerWeek;
+    $("hours").max = i.hoursPerWeek;
+    setPair("hours", i.workedHoursPerWeek);
+    setPair("leave", i.unpaidLeaveWeeks);
+    setPair("days", i.nurseryDaysSaved || 0);
+    setVal("carType", i.carType);
+    setVal("carList", i.carListPrice);
+    setVal("carBik", i.carBikPct);
+    setVal("carOther", i.carOtherwiseMonthly);
+    setVal("carStart", i.carStartMonth);
+    setVal("carEnd", i.carEndMonth);
+    $("carRenew").checked = !!i.carRenew;
+  }
+
+  var choose = document.createElement("option");
+  choose.value = "";
+  choose.textContent = "Choose an example";
+  $("preset").appendChild(choose);
+  var groupBoxes = {};
+  var groupOrder = [];
+  Engine.presets.forEach(function (p) {
+    var o = document.createElement("option");
+    o.value = p.id;
+    o.textContent = p.title;
+    if (!p.group) {
+      $("preset").appendChild(o);
+      return;
+    }
+    if (!groupBoxes[p.group]) {
+      var g = document.createElement("optgroup");
+      g.label = p.group;
+      groupBoxes[p.group] = g;
+      groupOrder.push(p.group);
+    }
+    groupBoxes[p.group].appendChild(o);
+  });
+  groupOrder.forEach(function (name) { $("preset").appendChild(groupBoxes[name]); });
+
+  $("preset").addEventListener("change", function () {
+    var id = $("preset").value;
+    var found = Engine.presets.filter(function (p) { return p.id === id; })[0];
+    if (!found) { $("presetNote").textContent = ""; return; }
+    scenarios = [];
+    applyInputs(found.inputs);
+    $("presetNote").textContent = found.note;
+    render();
+  });
+
+  addChild("2024-06-15");
+  render();
+</script>
+</body>
+</html>
